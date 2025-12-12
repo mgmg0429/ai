@@ -34,7 +34,7 @@ Lumina AI는 최첨단 인공지능 기술을 활용한 주식 투자 플랫폼�
 
 1. 저장소 클론
 
-git clone https://github.com/mgmg0429/sunrize-ai-pro.git
+git clone https://github.com/mgmg0429/ai
 
 2. 의존성 설치
 
