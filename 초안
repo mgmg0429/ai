@@ -1,0 +1,79 @@
+import os
+import joblib
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression # 단순 회귀 모델 사용
+from sklearn.metrics import mean_squared_error, r2_score
+import pandas as pd
+from typing import Tuple, Any
+
+# NOTE: data_processing 모듈이 이 파일과 같은 src/ 디렉토리에 있다고 가정합니다.
+# 실제 실행 시에는 패키지 구조에 따라 import 경로를 수정해야 합니다.
+try:
+    from .data_processing import load_simulated_data, clean_data, feature_engineering, preprocess_for_ml, TARGET_COLUMN
+except ImportError:
+    # 모듈을 직접 실행할 경우의 대체 임포트 (테스트 용도)
+    print("WARNING: Using direct import for standalone execution test.")
+    from data_processing import load_simulated_data, clean_data, feature_engineering, preprocess_for_ml, TARGET_COLUMN
+
+# --- Constants ---
+MODEL_DIR = "models"
+MODEL_FILENAME = "stock_price_predictor.pkl"
+MODEL_PATH = os.path.join(MODEL_DIR, MODEL_FILENAME)
+TEST_SIZE = 0.2
+RANDOM_STATE = 42
+
+def train_and_save_model() -> None:
+    """
+    데이터를 로드, 전처리하고 머신러닝 모델을 학습시켜 저장합니다.
+    """
+    print("\n------------------------------------------------------------------")
+    print("Lumina AI: 모델 학습 파이프라인 시작")
+    print("------------------------------------------------------------------")
+    
+    # 1. 데이터 파이프라인 실행
+    try:
+        raw_data = load_simulated_data()
+        cleaned_data = clean_data(raw_data)
+        featured_data = feature_engineering(cleaned_data)
+        X, y = preprocess_for_ml(featured_data)
+    except Exception as e:
+        print(f"ERROR: 데이터 처리 중 오류 발생: {e}")
+        return
+
+    # 2. 학습/테스트 데이터 분리
+    # 시계열 데이터이므로, 실제로는 마지막 N 기간을 테스트셋으로 사용해야 하지만,
+    # 간단한 초안 작성을 위해 임의 분할을 사용합니다.
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=TEST_SIZE, shuffle=False, random_state=RANDOM_STATE
+    )
+    
+    print(f"데이터 분할 완료: 학습 데이터 {len(X_train)}개, 테스트 데이터 {len(X_test)}개")
+
+    # 3. 모델 정의 및 학습 (Linear Regression)
+    # 목표: 다음 날 종가(회귀) 예측
+    model = LinearRegression()
+    print("모델 학습 시작 (Linear Regression)...")
+    model.fit(X_train, y_train)
+    print("모델 학습 완료.")
+
+    # 4. 모델 성능 평가
+    y_pred = model.predict(X_test)
+    mse = mean_squared_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+    
+    print("\n--- 모델 성능 평가 ---")
+    print(f"Mean Squared Error (MSE): {mse:.2f}")
+    print(f"R-squared (R2 Score): {r2:.4f} (1에 가까울수록 좋음)")
+    print("----------------------")
+
+    # 5. 모델 저장
+    os.makedirs(MODEL_DIR, exist_ok=True)
+    joblib.dump(model, MODEL_PATH)
+    
+    print(f"\n성공: 학습된 모델이 '{MODEL_PATH}' 경로에 저장되었습니다.")
+    print("------------------------------------------------------------------")
+
+
+if __name__ == "__main__":
+    # 이 파일을 단독으로 실행하여 모델 학습 및 저장을 테스트합니다.
+    train_and_save_model()
